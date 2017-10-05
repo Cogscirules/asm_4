@@ -1,0 +1,191 @@
+---
+title: "Assignment 1 - Language Development in ASD - part 4"
+author: "Riccardo Fusaroli"
+date: "August 10, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+asm4data= read.csv("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 1/Assignment-1---Anja/CSVASM1.csv")
+
+setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm_4")
+
+library(dplyr)
+library(lmerTest)
+library(ggplot2)
+library(hydroGOF)
+library(gstat)
+library(dplyr)
+library(stringr)
+library(plyr)
+library(caret)
+library(modelr)
+library(ModelMetrics)
+library(Metrics)
+library(tidyverse)
+library(simr)
+library(MASS)
+library(pacman)
+
+p_load(MASS) #installerer og loader på samme tid
+
+
+```
+
+## Welcome to the fourth exciting part of the Language Development in ASD exercise
+
+In this exercise we will assess how many participants we would need to adequately replicate our findings (ensuring our sample size is adequate, our alpha at 0.05 and our beta at 0.8).
+
+### Exercise 1
+
+How much power does your study have (if your model estimates are quite right)?
+- [GitHub]Load your dataset, fit your favorite model, assess power for your main effects and interactions of interest.
+- Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+
+```{r}
+
+fav_model  = lmer(CHI_MLU ~ ADOS + ExpressiveLangRaw + (1+ visit|subj_id), asm4data, REML = F)
+summary(fav_model)
+
+#Simulate, assess the power for the main effects + inteeractions you find interesting
+
+#ADOS
+power_fav_v = powerSim(fav_model, fixed("ADOS"), nsim = 10)
+power_fav_v
+
+# 70 % power - 70 % of the time, the ADOS in the model will show me an effect in the right direction that is also statistically significant. According to conventions it is a bit too low - 80 % is ideal. 
+
+
+#Verbal-IQ
+power_fav_e = powerSim(fav_model, fixed('ExpressiveLangRaw'), nsim = 10)
+power_fav_e
+
+# 100 % power - Verbal IQ will consistently show me an effect in the right direction, which is also statistically significant. Everytime you run this analysis you will get the "right" result, but 100 % is a bit too much, some would call it "overpowered".
+
+
+
+```
+
+
+### Exercise 2
+
+How would you perform a more conservative power analysis?
+- Identify and justify a minimum effect size for each of your relevant effects
+- [GitHub] take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.
+- [GitHub] assess the power curve by Child.ID, identifying an ideal number of participants to estimate each effect
+- OPTIONAL if your power estimates do not reach an acceptable threshold simulate additional participants and repeat the previous analysis
+- Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+```{r}
+
+
+#Identify + justify a minimum effect size for each of your relevant effects. Desto mindre effect size, desto flere participants skal du bruge.
+
+fixef(fav_model)['ADOS'] <-0.01
+fixed(fav_model)['ExpressiveLangRaw']<-0.05
+powerCurveV = powerCurve(fav_model, fixed('ADOS'), along= 'subj_id', nsim = 10)
+
+plot(powerCurveV)
+#maybe try w/ higher effect sizes?
+
+fixef(fav_model)['ADOS'] <- 0.01
+fixed(fav_model)['ExpressiveLangRaw']<- 0.05
+powerCurveV_1 = powerCurve(fav_model, fixed('ExpressiveLangRaw'), along= 'subj_id', nsim = 10)
+
+plot(powerCurveV_1)
+#Overpowered! Can I use simulate for this? No? Which numbers should I change?
+
+#For the function in which I need more participants, I will use a simpler model
+
+simple_model = lmer(CHI_MLU ~ Diagnosis + visit + (1+ visit|subj_id), asm4data, REML = F)
+summary(simple_model)
+
+fixef(simple_model)['visit'] <-0.05
+fixed(simple_model)['Diagnosis']<-0.05
+powerCurveV_2 = powerCurve(simple_model, fixed('visit'), along= 'subj_id', nsim = 10)
+
+plot(powerCurveV_2)
+
+### Riccardo's clumsy function to simulate new participants
+### TO DO points are only notes for myself, so not part of the assignment
+
+createNewData <- function (participants,visits,model){
+  # participants is the number of subjects
+  # visits is the number of visits
+  # TO DO: LOOP THROUGH ALL FE ROWS AND AUTOMATICALLY EXTRACT NAMES OF FIXED EFFECTS AND ESTIMATES
+  fe <- fixef(model)
+  Intercept <- fe[1] #intercept
+  bVisit <- fe[2] #visit
+  bDiagnosis <- fe[3] #diagnosis
+  bVisitDiagnosis <- fe[4] #visit diagnosis interaction
+  # TO DO: INTEGRATE STANDARD ERROR?
+  
+  # TO DO: LOOP THROUGH ALL VC COMPONENTS AND AUTOMATICALLY EXTRACT NAMES OF EFFECTS AND ESTIMATES
+  vc<-VarCorr(model) # variance component
+  sigmaSubject <- as.numeric(attr(vc[[1]],"stddev")[1]) # random intercept by subject
+  sigmaVisit <- as.numeric(attr(vc[[1]],"stddev")[2]) # random slope of visit over subject
+  sigmaResiduals <- as.numeric(attr(vc,"sc"))
+  sigmaCorrelation <- as.numeric(attr(vc[[1]],"correlation")[2])
+  
+  # Create an empty dataframe
+  d=expand.grid(Visit=1:visits,subj_id=1:participants)
+  # Randomly sample from a binomial (to generate the diagnosis)
+  condition <- sample(rep(0:1, participants/2))
+  d$Diagnosis<-condition[d$subj_id]
+  d$Diagnosis[is.na(d$Diagnosis)]<-1
+  
+  ## Define variance covariance matrices:
+  Sigma.u<-matrix(c(sigmaSubject^2,
+                    sigmaCorrelation*sigmaSubject*sigmaVisit,
+                    sigmaCorrelation*sigmaSubject*sigmaVisit,
+                    sigmaVisit^2),nrow=2)
+  
+  ## generate new fake participants (column1=RandomIntercept, column2=RandomSlope)
+  u<-mvrnorm(n=participants,
+             mu=c(0,0),Sigma=cov(ranef(model)$subj_id))
+  
+  ## now generate fake data:
+  ### the outcome is extracted from a gaussian with
+  ### the solution to the model's equation as mean and
+  ### the residual standard deviation as standard deviation 
+  d$CHI_MLU <- rnorm(participants*visits,
+                     (Intercept+u[,1]) +
+                     (bVisit+u[,2])*d$Visit + 
+                     bDiagnosis*d$Diagnosis ,sigmaResiduals)  
+  
+  return(d)
+}
+
+
+
+sim1 = createNewData(10, 6, fav_model)
+fav_model  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim1, REML = F)
+
+fixef(fav_model)['Visit'] <-0.23
+fixed(fav_model)['Diagnosis']<-0.29
+powerCurveV = powerCurve(fav_model, fixed('Visit'), along= 'subj_id', nsim = 10)
+
+plot(powerCurveV)
+
+
+```
+
+
+### Exercise 3
+
+Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why.
+
+```{r}
+
+
+
+
+
+
+``` 
+
+
+
