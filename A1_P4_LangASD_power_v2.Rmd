@@ -103,11 +103,15 @@ plot(powerCurveV_1)
 simple_model = lmer(CHI_MLU ~ Diagnosis + visit + (1+ visit|subj_id), asm4data, REML = F)
 summary(simple_model)
 
+#changing the estimates
+
 fixef(simple_model)['visit'] <-0.05
-fixed(simple_model)['Diagnosis']<-0.05
+fixed(simple_model)['Diagnosis']<-0.3
 powerCurveV_2 = powerCurve(simple_model, fixed('visit'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV_2)
+
+#this is alright, but a few more participants would be good
 
 ### Riccardo's clumsy function to simulate new participants
 ### TO DO points are only notes for myself, so not part of the assignment
@@ -161,15 +165,20 @@ createNewData <- function (participants,visits,model){
 
 
 
-sim1 = createNewData(10, 6, fav_model)
+sim1 = createNewData(100, 6, fav_model)
 fav_model  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim1, REML = F)
+summary(fav_model)
 
-fixef(fav_model)['Visit'] <-0.23
-fixed(fav_model)['Diagnosis']<-0.29
+#Changing the estimates
+
+fixef(fav_model)['Visit'] <-0.04
+fixed(fav_model)['Diagnosis']<-0.02
 powerCurveV = powerCurve(fav_model, fixed('Visit'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV)
 
+
+#100 participants seems to be a fair amount, reaching exactly 80 % although with sligthly large errorbars.
 
 ```
 
@@ -179,6 +188,39 @@ plot(powerCurveV)
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why.
 
 ```{r}
+View(asm4data)
+
+td = subset(asm4data, Diagnosis == 'TD')
+View(td)
+
+td15 = data.frame(td, subj_id ==  1, 3, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 22, 25, 27)
+View(td15)
+
+#how do i do thiiiiiis
+td15 = td %>%
+  group_by(as.factor(subj_id = 1, 3, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 22, 25, 27)) %>%
+  summarise(visit = n())
+  
+
+
+asd = subset(asm4data, Diagnosis == 'ASD')
+View(asd)
+
+
+
+kids = merge()
+
+
+fav_model_30kids  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), kids, REML = F)
+summary(fav_model_30kids)
+
+#Changing the estimates
+
+fixef(fav_model)['Visit'] <-0.04
+fixed(fav_model)['Diagnosis']<-0.02
+powerCurveV_3 = powerCurve(fav_model, fixed('Visit'), along= 'subj_id', nsim = 10)
+
+plot(powerCurveV_3)
 
 
 
