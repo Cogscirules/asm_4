@@ -13,7 +13,7 @@ asm4data= read.csv("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 1/Assign
 setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm_4")
 
 library(dplyr)
-library(lme4)
+library(lmerTest)
 library(ggplot2)
 library(hydroGOF)
 library(gstat)
@@ -30,7 +30,7 @@ library(MASS)
 library(pacman)
 
 p_load(MASS) #Installs and loads a given package at the same time.
-p_unload(lmerTest)
+p_unload(lme4)
 
 ```
 
@@ -56,12 +56,13 @@ summary(fav_model)
 power_fav_v = powerSim(fav_model, fixed("ADOS"), nsim = 10)
 power_fav_v
 
-# 70 % power - 70 % of the time, the ADOS in the model will show me an effect in the right direction that is also statistically significant. According to conventions it is a bit too low - 80 % is ideal. 
+# 80 % power - 80 % of the time, the ADOS in the model will show me an effect in the right direction that is also statistically significant. According to conventions it 80 % is ideal. 
 
 
 #Verbal-IQ
 power_fav_e = powerSim(fav_model, fixed('ExpressiveLangRaw'), nsim = 10)
 power_fav_e
+
 
 # 100 % power - Verbal IQ will consistently show me an effect in the right direction, which is also statistically significant. Everytime you run this analysis you will get the "right" result, but 100 % is a bit too much, some would call it "overpowered".
 
@@ -85,14 +86,14 @@ How would you perform a more conservative power analysis?
 #Identify + justify a minimum effect size for each of your relevant effects. Desto mindre effect size, desto flere participants skal du bruge.
 
 fixef(fav_model)['ADOS'] <-0.01
-fixed(fav_model)['ExpressiveLangRaw']<-0.05
+fixef(fav_model)['ExpressiveLangRaw']<-0.05
 powerCurveV = powerCurve(fav_model, fixed('ADOS'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV)
 #maybe try w/ higher effect sizes?
 
 fixef(fav_model)['ADOS'] <- 0.01
-fixed(fav_model)['ExpressiveLangRaw']<- 0.05
+fixef(fav_model)['ExpressiveLangRaw']<- 0.05
 powerCurveV_1 = powerCurve(fav_model, fixed('ExpressiveLangRaw'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV_1)
@@ -106,7 +107,7 @@ summary(simple_model)
 #changing the estimates
 
 fixef(simple_model)['visit'] <-0.05
-fixed(simple_model)['Diagnosis']<-0.3
+fixef(simple_model)['Diagnosis']<-0.3
 powerCurveV_2 = powerCurve(simple_model, fixed('visit'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV_2)
@@ -164,7 +165,6 @@ createNewData <- function (participants,visits,model){
 }
 
 
-
 sim1 = createNewData(150, 6, simple_model)
 simple_model  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim1, REML = F)
 summary(simple_model)
@@ -197,10 +197,7 @@ View(td)
 td15 = data.frame(td, subj_id ==  1:156)
 View(td15)
 
-#how do i do thiiiiiis
-td15 = td %>%
-  group_by(as.factor(subj_id = 1, 3, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 22, 25, 27)) %>%
-  summarise(visit = n())
+
   
 
 
