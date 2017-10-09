@@ -30,7 +30,7 @@ library(MASS)
 library(pacman)
 
 p_load(MASS) #Installs and loads a given package at the same time.
-
+p_unload(lmerTest)
 
 ```
 
@@ -165,21 +165,21 @@ createNewData <- function (participants,visits,model){
 
 
 
-sim1 = createNewData(100, 6, simple_model)
+sim1 = createNewData(150, 6, simple_model)
 simple_model  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim1, REML = F)
-summary(fav_model)
+summary(simple_model)
 
 
 #Changing the estimates
 
-fixef(fav_model)['Visit'] <- -0.02
-fixed(fav_model)['Diagnosis']<-0.03
-powerCurveV = powerCurve(fav_model, fixed('Visit'), along= 'subj_id', nsim = 10)
+fixef(simple_model)['Visit'] <-0.04
+fixed(simple_model)['Diagnosis']<-0.02
+powerCurveV = powerCurve(simple_model, fixed('Visit'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV)
 
 
-#100 participants seems to be a fair amount, reaching exactly 80 % although with sligthly large errorbars.
+#150 participants seems to be a fair amount, reaching exactly 80 % although with sligthly large errorbars.
 
 ```
 
