@@ -104,15 +104,15 @@ plot(powerCurveV_1)
 simple_model = lmer(CHI_MLU ~ Diagnosis + visit + (1+ visit|subj_id), asm4data, REML = F)
 summary(simple_model)
 
-#changing the estimates
+#changing the estimates for the minimally interesting effect
 
 fixef(simple_model)['visit'] <-0.05
-fixef(simple_model)['Diagnosis']<-0.3
+fixef(simple_model)['DiagnosisTD']<-0.05
 powerCurveV_2 = powerCurve(simple_model, fixed('visit'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV_2)
 
-#this is alright, but a few more participants would be good
+#Underpowered given estimates of .05
 
 ### Riccardo's clumsy function to simulate new participants
 ### TO DO points are only notes for myself, so not part of the assignment
@@ -165,16 +165,17 @@ createNewData <- function (participants,visits,model){
 }
 
 
-sim1 = createNewData(150, 6, simple_model)
-simple_model  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim1, REML = F)
-summary(simple_model)
+
+sim1 = createNewData(200, 6, simple_model)
+simple_model_2  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim1, REML = F)
+summary(simple_model_2)
 
 
 #Changing the estimates
 
-fixef(simple_model)['Visit'] <-0.04
-fixed(simple_model)['Diagnosis']<-0.02
-powerCurveV = powerCurve(simple_model, fixed('Visit'), along= 'subj_id', nsim = 10)
+fixef(simple_model_2)['Visit'] <-0.05
+fixef(simple_model_2)['Diagnosis']<- 0.05
+powerCurveV = powerCurve(simple_model_2, fixed('Visit'), along= 'subj_id', nsim = 10)
 
 plot(powerCurveV)
 
@@ -189,36 +190,28 @@ plot(powerCurveV)
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why.
 
 ```{r}
-View(asm4data)
-
-td = subset(asm4data, Diagnosis == 'TD')
-View(td)
-
-td15 = data.frame(td, subj_id ==  1:156)
-View(td15)
 
 
-  
+sim3 = createNewData(30, 6, simple_model)
+
+simple_model_3  = lmer(CHI_MLU ~ Diagnosis + Visit +(1+ Visit|subj_id), sim3, REML = F)
+
+summary(simple_model_3)
+
+#Simulate, assess the power for the main effects + inteeractions you find interesting
+
+#Visit
+power_fav_1 = powerSim(simple_model_3, fixed("Visit"), nsim = 30)
+power_fav_1
+
+# 100 % power - 100 % of the time, visit in the model will show me an effect in the right direction that is also statistically significant. According to conventions it 80 % is ideal. 
 
 
-asd = subset(asm4data, Diagnosis == 'ASD')
-View(asd)
+#Diagnosis
+power_fav_2 = powerSim(simple_model_3, fixed('Diagnosis'), nsim = 30)
+power_fav_2
 
-
-
-kids = merge()
-__
-
-sim3 = createNewData(30, 6, fav_model)
-
-#Changing the estimates
-
-fixef(fav_model)['Visit'] <- -0.04
-fixed(fav_model)['Diagnosis']<- -0.02 
-powerCurveV_3 = powerCurve(fav_model, fixed('Visit'), along= 'subj_id', nsim = 10)
-
-plot(powerCurveV_3)
-
+#56.67 % power
 
 
 
